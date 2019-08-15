@@ -1,7 +1,130 @@
 import me from '../lib/math-expressions';
 import * as trees from '../lib/trees/basic';
 import * as poly from '../lib/polynomial/polynomial';
+import * as sv from '../lib/polynomial/single-var-poly';
 import * as simplify from '../lib/expression/simplify';
+
+describe("check if factored", function (){
+         var factorizations = [
+            ['(x+2)(x+1)', true],
+            ['x^2+3x+2', false],
+            ['x+2', true],
+            ['x^2-4', false],
+            ['(x+2)(x+2)(x-1)(x-4)', true],
+            ['(x+2)(x+2)(x-1)(x^2-4)', false],
+            ['(x+1)^2(x+2)', true],
+            ['(x^2-4)^2(x+2)', false],
+            ['x^2 - 1000000000000', false],
+            ['(x^2-100000000000)(x^2+1000000000000)', true],
+            ['2(x-1)(x+2)', true],
+            ['(1/2)(x^2-1)', false],
+            ['(1/2)(x-1)(x+1)', true],
+            ['x^4+2x^2+1', false],
+            ['2(x^6+4x^3+4)', false]
+                               ];
+         
+         factorizations.forEach(function(example) {
+                                it(example, function() {
+                                   let f = me.fromText(example[0]);
+                                   expect(sv.is_factored(f)).toEqual(example[1]);
+                                   });
+                                });
+         });
+
+describe("can be factored", function (){
+         var expressions = [
+                            ['x^2+3x+2', true],
+                            ['x^2-4', true]
+                            ];
+         
+         expressions.forEach(function(example) {
+                             it(example, function(){
+                                let f = me.fromText(example[0]).tree;
+                                expect(sv.can_be_factored(f)).toEqual(example[1]);
+                                });
+                             });
+         });
+
+
+describe("extract factors", function (){
+         var expressions = [
+                            ['x^2-4', [['+', ['^', 'x', 2], ['-',4]]]],
+                            ['(x+1)^2(x+2)',[['+', 'x', 1], ['+', 'x', 2]]],
+                            ['(x^2-4)^2(x+2)',[['+', ['^', 'x', 2], ['-', 4]], ['+', 'x', 2]]]
+                            ];
+         
+         expressions.forEach(function(example) {
+                             it(example, function(){
+                                let f = me.fromText(example[0]);
+                                expect(sv.extract_factors(f)).toEqual(example[1]);
+                                });
+                             });
+         });
+
+describe("rational roots with multiplicity", function () {
+         var poly_and_roots = [
+                              ['(x-1)^2(x+2)', [[1,2],[-2,1]]],
+                              ['x^2-9', [[3,1],[-3,1]]],
+                              ['(2x-1)^3(x+4)(x-1)^2',[[1,2],[['/',1,2],3],[-4,1]]],
+                               ['x^4(x-1)', [[0,4],[1,1]]]
+                               ];
+         
+         poly_and_roots.forEach(function(example) {
+                                it(example, function() {
+                                   let f = poly.expression_to_polynomial(me.fromText(example[0]));
+                                   let roots = sv.rational_roots_with_mult(f);
+                                   expect(roots).toEqual(example[1]);
+                                   });
+                                });
+         });
+
+describe("find rational roots", function () {
+         var poly_and_roots = [
+                                    ['(x-1)(x+2)', [1,-2]],
+                                    ['x^2-9', [3,-3]],
+                                    ['(2x-1)(x+4)(x-1)',[1,['/',1,2],-4]],
+                                    ['x^2-4', [2,-2]]
+         ]
+         
+         poly_and_roots.forEach(function(example) {
+                it(example, function() {
+                   let f = poly.expression_to_polynomial(me.fromText(example[0]));
+                   let roots = sv.rational_roots(f);
+                   let simplified_roots = [];
+                   roots.forEach(function(num) {
+                                    simplified_roots.push(simplify.simplify(num));
+                                      });
+                   expect(simplified_roots).toEqual(example[1]);
+                   });
+            });
+         });
+
+describe("all factors", function() {
+         var factors = [
+                        [9, [1,9,3]],
+                        [2, [1,2]]
+         ]
+         
+         factors.forEach(function(example){
+                         it(example, function() {
+                            expect(sv.all_factors(example[0])).toEqual(example[1]);
+                            });
+                         });
+         });
+
+describe("sv poly", function () {
+         var polys = [
+                ['(x-1)(x+2)', ["polynomial", 'x', [[0,-2],[1,1],[2,1]]]],
+                ['x^2-9', ["polynomial", 'x', [[0,-9],[2,1]]]],
+                ['(2x-1)(x+4)(x-1)', ["polynomial", 'x', [[0,4],[1,-11],[2,5],[3,2]]]]
+         ]
+         
+         polys.forEach(function(example){
+                       it(example, function() {
+                          expect(poly.expression_to_polynomial(me.fromText(example[0]))).toEqual(example[1]);
+                          });
+                       });
+         });
 
 
 describe("pt reduce rational expression", function () {
@@ -318,7 +441,7 @@ describe("initial terms", function () {
     'x/7-2/3+3/4x^2': ["monomial", ['/', 3, 4], [["x",2]]],
     '9x^(2/3)-pi*x': ["monomial", ['-', 'pi'], [["x",1]]],
     '(5x^2-3x+1)/3': ["monomial", ['/', 5, 3], [["x",2]]],
-    '7i+2x+3ix': ["monomial", ['+', 2, ['*', 3, 'i']], [["x", 1]]],
+    '7i+2x+3ix': ["monomial", ["+", ["*", 3, "i"], 2], [["x", 1]]],
     '6t+2t-5t^2-1+5t^2': ["monomial", 8, [["t", 1]]],
     't-t^1000000000': ["monomial", -1, [["t",1000000000]]],
     '(x+y)^2': ["monomial", 1, [["x",2]]],
@@ -332,7 +455,7 @@ describe("initial terms", function () {
         });
     });
 });
-
+ 
 describe("text to polynomial", function () {
 
     var polys = {
@@ -345,7 +468,7 @@ describe("text to polynomial", function () {
 	'x/7-2/3+3/4x^2': ["polynomial", "x", [[0, ['/', -2, 3]], [1, ['/', 1, 7]], [2, ['/', 3, 4]]]],
 	'9x^(2/3)-pi*x': ["polynomial", "x", [[0, ["polynomial", ['^', 'x', ['/', 1, 3]], [[2, 9]]]], [1, ['-', 'pi']]]],
 	'(5x^2-3x+1)/3': ["polynomial", "x", [[0, ['/', 1, 3]], [1, -1], [2, ['/', 5, 3]]]],
-	'7i+2x+3ix': ["polynomial", "x", [[0, ['*', 7, 'i']], [1, ['+', 2, ['*', 3, 'i']]]]],
+	'7i+2x+3ix': ["polynomial", "x", [[0, ["*", 7, "i"]], [1, ["+", ["*", 3, "i"], 2]]]],
 	'6t+2t-5t^2-1+5t^2': ["polynomial", "t", [[0, -1], [1, 8]]],
 	'(3,4)': false,
 	'0/0': NaN,
